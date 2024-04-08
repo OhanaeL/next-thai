@@ -19,31 +19,36 @@ LOGGER = get_logger(__name__)
 
 
 def run():
-    st.set_page_config(
-        page_title="Hello",
-        page_icon="👋",
+    # Interactive Streamlit elements, like these sliders, return their value.
+    # This gives you an extremely simple interaction model.
+    start = st.sidebar.selectbox(
+    'Starting Point',
+    ('Email', 'Home phone', 'Mobile phone'))
+    destinations = st.sidebar.multiselect(
+    'Destination',
+    ['Green', 'Yellow', 'Red', 'Blue'])
+    today = datetime.datetime.now()
+    next_year = today.year + 1
+    jan_1 = datetime.date(next_year, 1, 1)
+    dec_31 = datetime.date(next_year, 12, 31)
+
+    duration = st.sidebar.date_input(
+        "Duration Date",
+        (jan_1, datetime.date(next_year, 1, 7)),
+        jan_1,
+        dec_31,
+        format="MM.DD.YYYY",
     )
+    cost = st.sidebar.slider('Managing Your Trip Costs', 3000, 20000, 10000, 1000)
+    number = st.sidebar.number_input('Insert a number')
+    destinations = st.sidebar.multiselect(
+    'Trip Type',
+    ['Green', 'Yellow', 'Red', 'Blue'])
 
-    st.write("# Welcome to Streamlit! 👋")
-
-    st.sidebar.success("Select a demo above.")
-
-    st.markdown(
-        """
-        Streamlit is an open-source app framework built specifically for
-        Machine Learning and Data Science projects.
-        **👈 Select a demo from the sidebar** to see some examples
-        of what Streamlit can do!
-        ### Want to learn more?
-        - Check out [streamlit.io](https://streamlit.io)
-        - Jump into our [documentation](https://docs.streamlit.io)
-        - Ask a question in our [community
-          forums](https://discuss.streamlit.io)
-        ### See more complex demos
-        - Use a neural net to [analyze the Udacity Self-driving Car Image
-          Dataset](https://github.com/streamlit/demo-self-driving)
-        - Explore a [New York City rideshare dataset](https://github.com/streamlit/demo-uber-nyc-pickups)
-    """
+    # Streamlit widgets automatically run the script from top to bottom. Since
+    # this button is not connected to any other logic, it just causes a plain
+    # rerun.
+    st.button("Re-run")
     )
 
 
