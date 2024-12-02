@@ -38,33 +38,27 @@ if "themes" not in ms:
                     "refreshed": True,
                     }
     
-def generate_pdf(text):
-    buffer = io.BytesIO()  # Create an in-memory buffer
-    
-    # Create a PDF document with the buffer as the file
-    doc = SimpleDocTemplate(buffer, pagesize=letter)
 
-    # Set up a style for the text
+def generate_pdf(text):
+    buffer = io.BytesIO()
+    
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    
     styles = getSampleStyleSheet()
     style = styles['Normal']
     style.fontSize = 10
     style.leading = 12  # Line height
     style.textColor = colors.black
-
-    # Split the text into paragraphs
-    paragraphs = text.split("\n")
+    
+    # Convert the Markdown formatted text into Paragraph objects for reportlab
+    formatted_paragraphs = text.split('\n\n')  # Split text into paragraphs
     story = []
-
-    # Create Paragraph objects for each line of text to handle wrapping
-    for paragraph in paragraphs:
+    for paragraph in formatted_paragraphs:
         para = Paragraph(paragraph, style)
         story.append(para)
     
-    # Build the PDF with the content
     doc.build(story)
-
-    # Get the buffer containing the PDF content
-    buffer.seek(0)  # Rewind the buffer to the beginning
+    buffer.seek(0)
     return buffer
 
 def run():
@@ -157,7 +151,7 @@ def run():
     st.write(st.session_state['replyText'])
     if responded:
         # Generate PDF and provide download option
-        pdf_buffer = generate_pdf(st.session_state['replyText'].replace("*", ""))
+        pdf_buffer = generate_pdf(st.session_state['replyText'])
         st.download_button('Download Plan as PDF', pdf_buffer, file_name="Thailand_Trip_Plan.pdf", mime="application/pdf")
 
 
