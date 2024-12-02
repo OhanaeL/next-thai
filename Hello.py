@@ -8,7 +8,7 @@ from xhtml2pdf import pisa
 
 LOGGER = get_logger(__name__)
 
-genai.configure(api_key="AIzaSyDIE-eTP10u6EuYY8_WMq2wfrbsakQ4Oo0")
+genai.configure(api_key=st.secrets["GPT_API_KEY"])
 model = genai.GenerativeModel('gemini-pro')
 chat = model.start_chat(history=[])
 budget_min = 1000
