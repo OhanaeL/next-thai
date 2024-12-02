@@ -1,7 +1,10 @@
 import streamlit as st
 import datetime
+import io
 from streamlit.logger import get_logger
 import google.generativeai as genai
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 LOGGER = get_logger(__name__)
 
@@ -31,6 +34,32 @@ if "themes" not in ms:
     ms.themes = {"current_theme": "dark",
                     "refreshed": True,
                     }
+    
+def generate_pdf(text):
+    buffer = io.BytesIO()  # Create an in-memory buffer
+    c = canvas.Canvas(buffer, pagesize=letter)  # Create a canvas with letter page size
+    width, height = letter  # Get the page size dimensions
+
+    # Set up the canvas, fonts, etc.
+    c.setFont("Helvetica", 10)
+    margin = 40
+    line_height = 12
+    current_y = height - margin  # Start near the top of the page
+
+    # Add the text to the PDF
+    for line in text.split('\n'):
+        c.drawString(margin, current_y, line)
+        current_y -= line_height  # Move down the page for the next line
+        if current_y <= margin:
+            c.showPage()  # Start a new page if we run out of space
+            c.setFont("Helvetica", 10)
+            current_y = height - margin
+
+    c.save()  # Save the PDF
+
+    buffer.seek(0)  # Rewind the buffer to the beginning
+
+    return buffer
 
 def run():
     
@@ -121,7 +150,9 @@ def run():
         pass
     st.write(st.session_state['replyText'])
     if responded:
-        st.download_button('Download Plan!', st.session_state['replyText'].replace("*",""))
+        # Generate PDF and provide download option
+        pdf_buffer = generate_pdf(st.session_state['replyText'].replace("*", ""))
+        st.download_button('Download Plan as PDF', pdf_buffer, file_name="Thailand_Trip_Plan.pdf", mime="application/pdf")
 
 
 def reply(prompt):
