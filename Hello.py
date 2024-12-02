@@ -6,8 +6,8 @@ import google.generativeai as genai
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, BulletList
 from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph
 
 LOGGER = get_logger(__name__)
 
@@ -40,8 +40,8 @@ if "themes" not in ms:
     
 
 def generate_pdf(text):
+    # Create a PDF in memory
     buffer = io.BytesIO()
-    
     doc = SimpleDocTemplate(buffer, pagesize=letter)
     
     styles = getSampleStyleSheet()
@@ -49,14 +49,23 @@ def generate_pdf(text):
     style.fontSize = 10
     style.leading = 12  # Line height
     style.textColor = colors.black
-    
-    # Convert the Markdown formatted text into Paragraph objects for reportlab
-    formatted_paragraphs = text.split('\n\n')  # Split text into paragraphs
+
     story = []
-    for paragraph in formatted_paragraphs:
-        para = Paragraph(paragraph, style)
-        story.append(para)
     
+    # Manually handle the formatting of markdown elements
+    lines = text.split('\n')
+    for line in lines:
+        if line.startswith("**") and line.endswith("**"):  # Bold text
+            bold_text = line[2:-2]  # Remove the ** for bold
+            story.append(Paragraph(f"<strong>{bold_text}</strong>", style))
+        elif line.startswith("*"):  # List item
+            list_item = line[2:]  # Remove the * for list items
+            story.append(Paragraph(f"- {list_item}", style))
+        else:
+            story.append(Paragraph(line, style))
+        
+        story.append(Spacer(1, 12))  # Add space between paragraphs
+
     doc.build(story)
     buffer.seek(0)
     return buffer
