@@ -1,29 +1,49 @@
 import streamlit as st
 import datetime
 from streamlit.logger import get_logger
-import pathlib
 import google.generativeai as genai
 
 LOGGER = get_logger(__name__)
 
-genai.configure(api_key="AIzaSyCKNwQ2p9XA71CfMZF5Pfuq2flFjnZoK4k")
+genai.configure(api_key="AIzaSyDIE-eTP10u6EuYY8_WMq2wfrbsakQ4Oo0")
 model = genai.GenerativeModel('gemini-pro')
 chat = model.start_chat(history=[])
 budget_min = 1000
-budget_max = 50000
-if 'replyText' not in st.session_state:
-    st.session_state['replyText'] = ''
+budget_max = 15000
+ms = st.session_state
+chat = None
+responded = False
+greeting_message = 'Your Thailand Trip Planner Powered by AI. Simplify your travels across Thailand with personalized itineraries crafted just for you. Discover the best of Thailand effortlessly with Next Thai.'
+if 'AIModel' not in ms:
+    chat = model.start_chat(history=[])
+    chat.send_message("Your current role in this system is that of an AI travel planner and itinerary maker. Users will come to you with a prompt detailing their travel date range, budget, destinations, trip types, number of people and more. Your job is to make sure the dates and budgets in your plan do not go over the submitted values in the prompt. The budget will include the transportation fee from the starting point to the first destination. Make sure to allot time and budget to go back to the starting destination before the duration is over when you make a plan and include that in the itinerary. Make sure that the itinerary does not go over the user's submitted budget and date range. If the trip is not possible or very difficult, instead of making the plan, say so and you can suggest changes the users could make to the prompt; for example extending the duration or removing a destination. Put a title of the trip at the top of the plan. Don't use first person pronouns for yourself or refer to yourself as an AI. Give links to hotels suggested.")
+    ms['AIModel'] = chat
+else:
+    chat = ms['AIModel']
+
+if 'replyText' not in ms:
+    ms['replyText'] = greeting_message
+if ms['replyText'] == greeting_message:
+    responded = False
+else: 
+    responded = True
+if "themes" not in ms: 
+    ms.themes = {"current_theme": "dark",
+                    "refreshed": True,
+                    }
 
 def run():
     
-    global replyText
+    global replyText, responded
 
     st.set_page_config(
-        page_title="Next Thai",
-        page_icon="👋",
+        page_title="Next Thai - Travels",
+        page_icon="✈️",
+        layout="wide"
     )
-
+    st.image('images/Group 1.png', caption="")
     st.markdown("# Customize Your Journey Here!")
+    st.subheader("Your Dream Trip with Next Thai.")
     st.sidebar.header("Customize Your Journey Here!")
 
     today = datetime.datetime.now()
@@ -32,55 +52,22 @@ def run():
 
     start = st.sidebar.selectbox(
     'Starting Point',
-    ("Amnat Charoen", "Ang Thong", "Bangkok", "Bueng Kan", "Chachoengsao", 
-    "Chaiyaphum", "Chanthaburi", "Chiang Mai", "Chiang Rai", "Chonburi", 
-    "Chumphon", "Hat Yai", "Kalasin", "Kamphaeng Phet", "Kanchanaburi", 
-    "Khlong Luang", "Khon Kaen", "Krabi", "Lampang", "Lamphun", 
-    "Laem Chabang", "Loei", "Lopburi", "Mae Sot", "Maha Sarakham", 
-    "Mukdahan", "Nakhon Nayok", "Nakhon Pathom", "Nakhon Phanom", 
-    "Nakhon Ratchasima (Korat)", "Nakhon Sawan", "Nakhon Si Thammarat", 
-    "Nan", "Narathiwat", "Nong Bua Lamphu", "Nong Khai", "Nonthaburi", 
-    "Pak Kret", "Pak Kret", "Pak Kret", "Pak Kret", "Pattaya", "Phang Nga", 
-    "Phatthalung", "Phayao", "Phetchabun", "Phetchabun", "Phetchaburi", 
-    "Phetchaburi", "Phichit", "Phitsanulok", "Phra Nakhon Si Ayutthaya", 
-    "Phrae", "Phuket", "Prachin Buri", "Prachuap Khiri Khan", "Ranong", 
-    "Ratchaburi", "Rayong", "Roi Et", "Sa Kaeo", "Sakon Nakhon", 
-    "Samut Prakan", "Samut Sakhon", "Samut Songkhram", "Saraburi", 
-    "Satun", "Sing Buri", "Si Racha", "Sisaket", "Songkhla", "Sukhothai", 
-    "Suphan Buri", "Surat Thani", "Surin", "Tak", "Trang", "Trat", 
-    "Ubon Ratchathani", "Udon Thani", "Uttaradit", "Uthai Thani", "Yala", 
-    "Yasothon"))
+    ("Bangkok", "Nonthaburi", "Pak Kret", "Hua Hin", "Hat Yai", "Chaophraya Surasak", "Surat Thani","Nakhon Ratchasima","Chiang Mai","Udon Thani","Pattaya","Khon Kaen","Nakhon Si Thammarat","Laem Chabang","Rangsit","Nakhon Sawan","Phuket","Chiang Rai","Ubon Ratchathani","Nakhon Pathom","Ko Samui","Samut Sakhon","Phitsanulok","Rayong","Songkhla","Yala","Trang","Om Noi","Sakon Nakhon","Lampang","Samut Prakan" ,"Phra Nakhon Si Ayutthaya","Mae Sot"))
 
     destinations = st.sidebar.multiselect(
     'Destination',
-    ["Amnat Charoen", "Ang Thong", "Bangkok", "Bueng Kan", "Chachoengsao", 
-    "Chaiyaphum", "Chanthaburi", "Chiang Mai", "Chiang Rai", "Chonburi", 
-    "Chumphon", "Hat Yai", "Kalasin", "Kamphaeng Phet", "Kanchanaburi", 
-    "Khlong Luang", "Khon Kaen", "Krabi", "Lampang", "Lamphun", 
-    "Laem Chabang", "Loei", "Lopburi", "Mae Sot", "Maha Sarakham", 
-    "Mukdahan", "Nakhon Nayok", "Nakhon Pathom", "Nakhon Phanom", 
-    "Nakhon Ratchasima (Korat)", "Nakhon Sawan", "Nakhon Si Thammarat", 
-    "Nan", "Narathiwat", "Nong Bua Lamphu", "Nong Khai", "Nonthaburi", 
-    "Pak Kret", "Pak Kret", "Pak Kret", "Pak Kret", "Pattaya", "Phang Nga", 
-    "Phatthalung", "Phayao", "Phetchabun", "Phetchabun", "Phetchaburi", 
-    "Phetchaburi", "Phichit", "Phitsanulok", "Phra Nakhon Si Ayutthaya", 
-    "Phrae", "Phuket", "Prachin Buri", "Prachuap Khiri Khan", "Ranong", 
-    "Ratchaburi", "Rayong", "Roi Et", "Sa Kaeo", "Sakon Nakhon", 
-    "Samut Prakan", "Samut Sakhon", "Samut Songkhram", "Saraburi", 
-    "Satun", "Sing Buri", "Si Racha", "Sisaket", "Songkhla", "Sukhothai", 
-    "Suphan Buri", "Surat Thani", "Surin", "Tak", "Trang", "Trat", 
-    "Ubon Ratchathani", "Udon Thani", "Uttaradit", "Uthai Thani", "Yala", 
-    "Yasothon"])
+    ["Bangkok", "Nonthaburi", "Pak Kret", "Hua Hin", "Hat Yai", "Chaophraya Surasak", "Surat Thani","Nakhon Ratchasima","Chiang Mai","Udon Thani","Pattaya","Khon Kaen","Nakhon Si Thammarat","Laem Chabang","Rangsit","Nakhon Sawan","Phuket","Chiang Rai","Ubon Ratchathani","Nakhon Pathom","Ko Samui","Samut Sakhon","Phitsanulok","Rayong","Songkhla","Yala","Trang","Om Noi","Sakon Nakhon","Lampang","Samut Prakan" ,"Phra Nakhon Si Ayutthaya","Mae Sot"])
 
     duration = st.sidebar.date_input(
         "Duration Date",
-        (today, today),
+        (today, datetime.date(today.year , today.month, today.day +1)),
         today,
         max_year,
         format="MM.DD.YYYY")
     difference = 1
     if len(duration) > 1:
         difference = duration[1].day-duration[0].day + 1
+
     people = st.sidebar.number_input('How Many People?', min_value = 1, max_value = 30, value = 1, step = 1)
 
     cost = st.sidebar.slider('Total Cost per Person', int(budget_min*difference), int(budget_max*difference), int(budget_min*difference) + 3500, 500)
@@ -123,12 +110,19 @@ def run():
     ])
 
     additional_trip = st.sidebar.text_input('Additional Trip Type')
+    if len(destinations) <= 0:
+        destinations.append(start)
     if st.sidebar.button('Generate'):
-        prompt = "I want to make a detailed trip planner from " + str(start)+ ", Thailand, and I want to visit " + list_to_string(destinations) + " equally. The duration is: " + str(duration) + ". I want the cost for each person to be between " + str(budget_min)+ " and maximum of " + str(cost) + "in Thai Bhat, for a total of " + str(people) +" people. The trip type must include: " + list_to_string(trip_type) + additional_trip +"."
-        reply(prompt)
+        responded = True
+        prompt = "I want to make a detailed trip planner with " + str(start)+ ", Thailand as the starting point, and I want to visit only " + list_to_string(destinations) + ". The duration is: " + str(difference) + " at a starting date of "+ str(duration[0]) +". Make sure to not go over that. I want the cost for each person to be a maximum of " + str(cost) + "in Thai Bhat, for a total of " + str(people) +" people. Make sure to not go over that. The trip type must include: " + list_to_string(trip_type) + additional_trip +"."
+        with st.spinner('GENERATING Travel Plan...'):
+            reply(prompt)
     else:
         pass
     st.write(st.session_state['replyText'])
+    if responded:
+        st.download_button('Download Plan!', st.session_state['replyText'].replace("*",""))
+
 
 def reply(prompt):
     global chat, replyText
@@ -138,6 +132,15 @@ def reply(prompt):
 def list_to_string(lst, delimiter=', '):
     return delimiter.join(lst)
 
+def ChangeTheme():
+  previous_theme = ms.themes["current_theme"]
+  tdict = ms.themes["light"] if ms.themes["current_theme"] == "light" else ms.themes["dark"]
+  for vkey, vval in tdict.items(): 
+    if vkey.startswith("theme"): st._config.set_option(vkey, vval)
+
+  ms.themes["refreshed"] = False
+  if previous_theme == "dark": ms.themes["current_theme"] = "light"
+  elif previous_theme == "light": ms.themes["current_theme"] = "dark"
+
 if __name__ == "__main__":
-    print("TEST")
     run()
