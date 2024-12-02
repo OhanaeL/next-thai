@@ -157,7 +157,7 @@ def run():
     st.write(st.session_state['replyText'])
     if responded:
         # Generate PDF and provide download option
-        pdf_buffer = generate_pdf(st.session_state['replyText'])
+        pdf_buffer = generate_pdf(st.session_state['replyText'].replace("*", ""))
         st.download_button('Download Plan as PDF', pdf_buffer, file_name="Thailand_Trip_Plan.pdf", mime="application/pdf")
 
 
