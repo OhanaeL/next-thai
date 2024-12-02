@@ -3,11 +3,8 @@ import datetime
 import io
 from streamlit.logger import get_logger
 import google.generativeai as genai
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
+import markdown2
+from xhtml2pdf import pisa
 
 LOGGER = get_logger(__name__)
 
@@ -20,6 +17,7 @@ ms = st.session_state
 chat = None
 responded = False
 greeting_message = 'Your Thailand Trip Planner Powered by AI. Simplify your travels across Thailand with personalized itineraries crafted just for you. Discover the best of Thailand effortlessly with Next Thai.'
+
 if 'AIModel' not in ms:
     chat = model.start_chat(history=[])
     chat.send_message("Your current role in this system is that of an AI travel planner and itinerary maker. Users will come to you with a prompt detailing their travel date range, budget, destinations, trip types, number of people and more. Your job is to make sure the dates and budgets in your plan do not go over the submitted values in the prompt. The budget will include the transportation fee from the starting point to the first destination. Make sure to allot time and budget to go back to the starting destination before the duration is over when you make a plan and include that in the itinerary. Make sure that the itinerary does not go over the user's submitted budget and date range. If the trip is not possible or very difficult, instead of making the plan, say so and you can suggest changes the users could make to the prompt; for example extending the duration or removing a destination. Put a title of the trip at the top of the plan. Don't use first person pronouns for yourself or refer to yourself as an AI. Give links to hotels suggested.")
@@ -34,44 +32,34 @@ if ms['replyText'] == greeting_message:
 else: 
     responded = True
 if "themes" not in ms: 
-    ms.themes = {"current_theme": "dark",
-                    "refreshed": True,
-                    }
-    
+    ms.themes = {"current_theme": "dark", "refreshed": True}
 
-def generate_pdf(text):
-    # Create a PDF in memory
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter)
-    
-    styles = getSampleStyleSheet()
-    style = styles['Normal']
-    style.fontSize = 10
-    style.leading = 12  # Line height
-    style.textColor = colors.black
+def convert_markdown_to_html(markdown_text):
+    # Convert markdown text to HTML
+    html_content = markdown2.markdown(markdown_text)
+    return html_content
 
-    story = []
-    
-    # Manually handle the formatting of markdown elements
-    lines = text.split('\n')
-    for line in lines:
-        if line.startswith("**") and line.endswith("**"):  # Bold text
-            bold_text = line[2:-2]  # Remove the ** for bold
-            story.append(Paragraph(f"<strong>{bold_text}</strong>", style))
-        elif line.startswith("*"):  # List item
-            list_item = line[2:]  # Remove the * for list items
-            story.append(Paragraph(f"- {list_item}", style))
-        else:
-            story.append(Paragraph(line, style))
-        
-        story.append(Spacer(1, 12))  # Add space between paragraphs
-
-    doc.build(story)
+def generate_pdf_from_html(html_content):
+    buffer = io.BytesIO()  # Create a buffer to store the PDF
+    pisa_status = pisa.CreatePDF(io.StringIO(html_content), dest=buffer)  # Convert HTML to PDF
     buffer.seek(0)
-    return buffer
+    return buffer  # Return the buffer containing the PDF
+
+def reply(prompt):
+    global chat, replyText
+    st.session_state['replyText'] = chat.send_message(prompt).text
+    
+    # Convert markdown to HTML
+    html_content = convert_markdown_to_html(st.session_state['replyText'])
+    
+    # Generate PDF from HTML
+    pdf_buffer = generate_pdf_from_html(html_content)
+    
+    # Store PDF buffer in session state for download
+    st.session_state['pdf_buffer'] = pdf_buffer
+    return
 
 def run():
-    
     global replyText, responded
 
     st.set_page_config(
@@ -88,20 +76,11 @@ def run():
 
     max_year = datetime.date(today.year +5, 12, 31)
 
-    start = st.sidebar.selectbox(
-    'Starting Point',
-    ("Bangkok", "Nonthaburi", "Pak Kret", "Hua Hin", "Hat Yai", "Chaophraya Surasak", "Surat Thani","Nakhon Ratchasima","Chiang Mai","Udon Thani","Pattaya","Khon Kaen","Nakhon Si Thammarat","Laem Chabang","Rangsit","Nakhon Sawan","Phuket","Chiang Rai","Ubon Ratchathani","Nakhon Pathom","Ko Samui","Samut Sakhon","Phitsanulok","Rayong","Songkhla","Yala","Trang","Om Noi","Sakon Nakhon","Lampang","Samut Prakan" ,"Phra Nakhon Si Ayutthaya","Mae Sot"))
+    start = st.sidebar.selectbox('Starting Point', ("Bangkok", "Nonthaburi", "Pak Kret", "Hua Hin", "Hat Yai", "Chaophraya Surasak", "Surat Thani","Nakhon Ratchasima","Chiang Mai","Udon Thani","Pattaya","Khon Kaen","Nakhon Si Thammarat","Laem Chabang","Rangsit","Nakhon Sawan","Phuket","Chiang Rai","Ubon Ratchathani","Nakhon Pathom","Ko Samui","Samut Sakhon","Phitsanulok","Rayong","Songkhla","Yala","Trang","Om Noi","Sakon Nakhon","Lampang","Samut Prakan" ,"Phra Nakhon Si Ayutthaya","Mae Sot"))
 
-    destinations = st.sidebar.multiselect(
-    'Destination',
-    ["Bangkok", "Nonthaburi", "Pak Kret", "Hua Hin", "Hat Yai", "Chaophraya Surasak", "Surat Thani","Nakhon Ratchasima","Chiang Mai","Udon Thani","Pattaya","Khon Kaen","Nakhon Si Thammarat","Laem Chabang","Rangsit","Nakhon Sawan","Phuket","Chiang Rai","Ubon Ratchathani","Nakhon Pathom","Ko Samui","Samut Sakhon","Phitsanulok","Rayong","Songkhla","Yala","Trang","Om Noi","Sakon Nakhon","Lampang","Samut Prakan" ,"Phra Nakhon Si Ayutthaya","Mae Sot"])
+    destinations = st.sidebar.multiselect('Destination', ["Bangkok", "Nonthaburi", "Pak Kret", "Hua Hin", "Hat Yai", "Chaophraya Surasak", "Surat Thani","Nakhon Ratchasima","Chiang Mai","Udon Thani","Pattaya","Khon Kaen","Nakhon Si Thammarat","Laem Chabang","Rangsit","Nakhon Sawan","Phuket","Chiang Rai","Ubon Ratchathani","Nakhon Pathom","Ko Samui","Samut Sakhon","Phitsanulok","Rayong","Songkhla","Yala","Trang","Om Noi","Sakon Nakhon","Lampang","Samut Prakan" ,"Phra Nakhon Si Ayutthaya","Mae Sot"])
 
-    duration = st.sidebar.date_input(
-        "Duration Date",
-        (today, datetime.date(today.year , today.month, today.day +1)),
-        today,
-        max_year,
-        format="MM.DD.YYYY")
+    duration = st.sidebar.date_input("Duration Date", (today, datetime.date(today.year , today.month, today.day +1)), today, max_year, format="MM.DD.YYYY")
     difference = 1
     if len(duration) > 1:
         difference = duration[1].day-duration[0].day + 1
@@ -110,42 +89,7 @@ def run():
 
     cost = st.sidebar.slider('Total Cost per Person', int(budget_min*difference), int(budget_max*difference), int(budget_min*difference) + 3500, 500)
 
-    trip_type = st.sidebar.multiselect(
-    'Trip Type',
-    [
-    "Adventure Trip",
-    "Backpacking Journey",
-    "Beach Vacation",
-    "Camping Expedition",
-    "City Break",
-    "Cultural Tour",
-    "Cycling Tour",
-    "Eco-Tourism Trip",
-    "Educational Excursion",
-    "Family Holiday",
-    "Foodie Expedition",
-    "Historical Tour",
-    "Hiking and Trekking Adventure",
-    "Luxury Getaway",
-    "Mountain Climbing Expedition",
-    "Photography Tour",
-    "Pilgrimage Journey",
-    "Relaxation Retreat",
-    "Road Trip",
-    "Romantic Retreat",
-    "Safari Adventure",
-    "Sailing Expedition",
-    "Scuba Diving Trip",
-    "Shopping Excursion",
-    "Skiing and Snowboarding Trip",
-    "Solo Expedition",
-    "Spiritual Retreat",
-    "Wellness Retreat",
-    "Wildlife Safari",
-    "Volunteer Travel Experience",
-    "Wine Tasting Tour",
-    "Yoga Retreat"
-    ])
+    trip_type = st.sidebar.multiselect('Trip Type', ["Adventure Trip", "Backpacking Journey", "Beach Vacation", "Camping Expedition", "City Break", "Cultural Tour", "Cycling Tour", "Eco-Tourism Trip", "Educational Excursion", "Family Holiday", "Foodie Expedition", "Historical Tour", "Hiking and Trekking Adventure", "Luxury Getaway", "Mountain Climbing Expedition", "Photography Tour", "Pilgrimage Journey", "Relaxation Retreat", "Road Trip", "Romantic Retreat", "Safari Adventure", "Sailing Expedition", "Scuba Diving Trip", "Shopping Excursion", "Skiing and Snowboarding Trip", "Solo Expedition", "Spiritual Retreat", "Wellness Retreat", "Wildlife Safari", "Volunteer Travel Experience", "Wine Tasting Tour", "Yoga Retreat"])
 
     additional_trip = st.sidebar.text_input('Additional Trip Type')
     if len(destinations) <= 0:
@@ -160,27 +104,13 @@ def run():
     st.write(st.session_state['replyText'])
     if responded:
         # Generate PDF and provide download option
-        pdf_buffer = generate_pdf(st.session_state['replyText'])
-        st.download_button('Download Plan as PDF', pdf_buffer, file_name="Thailand_Trip_Plan.pdf", mime="application/pdf")
+        pdf_buffer = st.session_state.get('pdf_buffer', None)
+        if pdf_buffer:
+            st.download_button('Download Plan as PDF', pdf_buffer, file_name="Thailand_Trip_Plan.pdf", mime="application/pdf")
 
-
-def reply(prompt):
-    global chat, replyText
-    st.session_state['replyText'] = chat.send_message(prompt).text
-    return
 
 def list_to_string(lst, delimiter=', '):
     return delimiter.join(lst)
-
-def ChangeTheme():
-  previous_theme = ms.themes["current_theme"]
-  tdict = ms.themes["light"] if ms.themes["current_theme"] == "light" else ms.themes["dark"]
-  for vkey, vval in tdict.items(): 
-    if vkey.startswith("theme"): st._config.set_option(vkey, vval)
-
-  ms.themes["refreshed"] = False
-  if previous_theme == "dark": ms.themes["current_theme"] = "light"
-  elif previous_theme == "light": ms.themes["current_theme"] = "dark"
 
 if __name__ == "__main__":
     run()

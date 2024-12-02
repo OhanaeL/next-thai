@@ -5,3 +5,5 @@ pydeck
 streamlit
 google-generativeai
 reportlab
+markdown2
+xhtml2pdf
